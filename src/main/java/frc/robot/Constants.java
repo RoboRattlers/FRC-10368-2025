@@ -18,13 +18,6 @@ public final class Constants {
 	public static final double MAX_SPEED = Units.feetToMeters(14.5);
 	// Maximum speed of the robot in meters per second, used to limit acceleration.
 
-	//  public static final class AutonConstants
-	//  {
-	//
-	//    public static final PIDConstants TRANSLATION_PID = new PIDConstants(0.7, 0, 0);
-	//    public static final PIDConstants ANGLE_PID       = new PIDConstants(0.4, 0, 0.01);
-	//  }
-
 	public static final class DrivebaseConstants {
 
 		// Hold time on motor brakes when disabled
@@ -38,5 +31,18 @@ public final class Constants {
 		public static final double LEFT_Y_DEADBAND = 0.1;
 		public static final double RIGHT_X_DEADBAND = 0.1;
 		public static final double TURN_CONSTANT = 6;
+	}
+
+	public static class CanId {
+		public static final int ELEVATOR_TOP = 10;
+
+		public static final int ELEVATOR_BOTTOM = 11;
+
+		public static final int PIVOT = 12;
+
+		public static final int CORALGAE_INNER = 13;
+		public static final int CORALGAE_OUTER_TOP = 14;
+
+		public static final int CORALGAE_OUTER_BOTTOM = 15;
 	}
 }

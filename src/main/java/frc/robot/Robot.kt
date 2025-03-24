@@ -3,21 +3,18 @@
 // the WPILib BSD license file in the root directory of this project.
 package frc.robot
 
-import edu.wpi.first.math.geometry.Rotation2d
 import edu.wpi.first.wpilibj.*
-import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.CommandScheduler
 import edu.wpi.first.wpilibj2.command.Commands
 import edu.wpi.first.wpilibj2.command.Commands.runOnce
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
 import frc.robot.Constants.OperatorConstants
+import frc.robot.subsystems.swervedrive.CoralgaeSubsystem
 import frc.robot.subsystems.swervedrive.ElevatorSubsystem
 import frc.robot.subsystems.swervedrive.PivotSubsystem
 import frc.robot.subsystems.swervedrive.SwerveSubsystem
 import swervelib.SwerveInputStream
 import java.io.File
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to each mode, as
@@ -31,11 +28,15 @@ class Robot : TimedRobot() {
             private set
     }
 
-    private val driverXbox: CommandXboxController = CommandXboxController(0)
+    private val driver1: CommandXboxController = CommandXboxController(0)
+    private val driver2: CommandXboxController = CommandXboxController(1)
+
     private var disabledTimer = Timer()
+
     private val swerve = SwerveSubsystem(File(Filesystem.getDeployDirectory(), "swerve"))
     private val elevator = ElevatorSubsystem()
     private val pivot = PivotSubsystem()
+    private val coralgae = CoralgaeSubsystem()
 
     init {
         instance = this
@@ -46,42 +47,59 @@ class Robot : TimedRobot() {
             val driveInputStreams = object {
                 val angularVelocity = SwerveInputStream.of(
                     swerve.swerveDrive,
-                    { -driverXbox.leftY },
-                    { -driverXbox.leftX })
-                    .withControllerRotationAxis { -driverXbox.rightX }
+                    { driver1.leftY },
+                    { driver1.leftX })
+                    .withControllerRotationAxis { driver1.rightX }
                     .deadband(OperatorConstants.DEADBAND)
                     .scaleTranslation(0.8)
                     .allianceRelativeControl(true)
 
                 val directAngle = angularVelocity
                     .copy()
-                    .withControllerHeadingAxis({ driverXbox.rightX }, { driverXbox.rightY })
+                    .withControllerHeadingAxis({ driver1.rightX }, { driver1.rightY })
                     .headingWhile(true)
             }
 
             swerve.defaultCommand = swerve.driveFieldOriented(driveInputStreams.angularVelocity)
 
-            driverXbox.a().onTrue(runOnce(swerve::zeroGyro))
-            driverXbox.leftBumper().whileTrue(Commands.run(swerve::lock, swerve))
+            driver1.a().onTrue(runOnce(swerve::zeroGyroWithAlliance))
         }
 
         // set up elevator controls
         run {
-            driverXbox.povUp().onTrue(elevator.toPosCommand(0.9))
-            driverXbox.povLeft().onTrue(elevator.toPosCommand(0.6))
-            driverXbox.povRight().onTrue(elevator.toPosCommand(0.3))
-            driverXbox.povDown().onTrue(elevator.toPosCommand(0.0))
+            driver1.povUp().onTrue(elevator.toPosCommand(1.0))
+            driver1.start().onTrue(elevator.toPosCommand(0.73))
+            driver1.povLeft().onTrue(elevator.toPosCommand(0.61))
+            driver1.povRight().onTrue(elevator.toPosCommand(0.26))
+            driver1.povDown().onTrue(elevator.toPosCommand(0.0))
         }
 
+        // set up pivot controls
+        run {
+            driver1.x().onTrue(pivot.toPosCommand(340.0))
+            driver1.y().onTrue(pivot.toPosCommand(700.0))
+            driver1.b().onTrue(pivot.toPosCommand(1580.0))
+            driver1.back().onTrue(pivot.toPosCommand(1570.0))
+        }
 
-        driverXbox.x().onTrue(pivot.toPosCommand(0.0))
-        driverXbox.y().onTrue(pivot.toPosCommand(400.0))
-        driverXbox.b().onTrue(pivot.toPosCommand(800.0))
+        // set up end effector controls
+        run {
+
+            driver1.leftTrigger().whileTrue(coralgae.algaeIntakeCommand(1.0))
+            driver1.rightTrigger().whileTrue(coralgae.algaeShootCommand(1.0))
+
+            driver1.leftStick().whileTrue(coralgae.coralIntakeCommand(0.5))
+            driver1.leftBumper().whileTrue(coralgae.coralIntakeCommand(0.1))
+            driver1.rightBumper().whileTrue(coralgae.coralIntakeCommand(-0.1))
+
+        }
 
     }
 
     override fun robotPeriodic() {
         CommandScheduler.getInstance().run()
+        pivot.lowerBound = if (elevator.currentHeight < 0.05) 0.0 else 300.0
+        pivot.upperBound = if (elevator.currentHeight >= 0.25) 1680.0 else 900.0
     }
     override fun disabledInit() {
         swerve.setMotorBrake(true)
@@ -101,6 +119,7 @@ class Robot : TimedRobot() {
     }
     override fun teleopInit() {
         swerve.setMotorBrake(true)
+        pivot.toPosCommand(400.0).schedule()
     }
     override fun autonomousInit() {
         swerve.setMotorBrake(true)

@@ -70,6 +70,7 @@ class Robot : TimedRobot() {
             driver1.povUp().onTrue(elevator.toPosCommand(1.0))
             driver1.start().onTrue(elevator.toPosCommand(0.73))
             driver1.povLeft().onTrue(elevator.toPosCommand(0.61))
+            driver1.rightStick().onTrue(elevator.toPosCommand(0.33))
             driver1.povRight().onTrue(elevator.toPosCommand(0.26))
             driver1.povDown().onTrue(elevator.toPosCommand(0.0))
         }
@@ -78,8 +79,9 @@ class Robot : TimedRobot() {
         run {
             driver1.x().onTrue(pivot.toPosCommand(340.0))
             driver1.y().onTrue(pivot.toPosCommand(700.0))
-            driver1.b().onTrue(pivot.toPosCommand(1580.0))
+            driver1.b().onTrue(pivot.toPosCommand(1680.0))
             driver1.back().onTrue(pivot.toPosCommand(1570.0))
+            driver1.leftTrigger().and(driver1.rightTrigger()).onTrue(pivot.autoHomeCommand())
         }
 
         // set up end effector controls
@@ -89,8 +91,8 @@ class Robot : TimedRobot() {
             driver1.rightTrigger().whileTrue(coralgae.algaeShootCommand(1.0))
 
             driver1.leftStick().whileTrue(coralgae.coralIntakeCommand(0.5))
-            driver1.leftBumper().whileTrue(coralgae.coralIntakeCommand(0.1))
-            driver1.rightBumper().whileTrue(coralgae.coralIntakeCommand(-0.1))
+            driver1.leftBumper().and(driver1.rightBumper().negate()).whileTrue(coralgae.coralIntakeCommand(0.1))
+            driver1.rightBumper().and(driver1.leftBumper().negate()).whileTrue(coralgae.coralIntakeCommand(-0.1))
 
         }
 

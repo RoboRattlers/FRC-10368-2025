@@ -71,4 +71,24 @@ class PivotSubsystem : SubsystemBase() {
         }
     }
 
+    fun autoHomeCommand(): Command {
+        val timer = Timer()
+        return SequentialCommandGroup(
+            runOnce {
+                timer.reset()
+                timer.start()
+                usePid = false
+                    },
+            run {
+                motor.setVoltage(-3.0)
+            }.until { timer.hasElapsed(1.5) },
+            runOnce {
+                motor.setVoltage(0.0)
+                motor.setEncoderPosition(-100.0)
+                usePid = true
+                toPosCommand(380.0).schedule()
+            }
+        )
+    }
+
 }

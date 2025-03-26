@@ -7,7 +7,6 @@ import com.revrobotics.spark.config.EncoderConfig
 import com.revrobotics.spark.config.SoftLimitConfig
 import com.revrobotics.spark.config.SparkBaseConfig
 import com.revrobotics.spark.config.SparkMaxConfig
-import com.thethriftybot.ThriftyNova
 import edu.wpi.first.math.MathUtil.clamp
 import edu.wpi.first.math.controller.PIDController
 import edu.wpi.first.math.filter.SlewRateLimiter
@@ -25,12 +24,15 @@ class ElevatorSubsystem : SubsystemBase() {
     val kD = 0.0
     val kFF = 0.2//0.8
     val kS = (0.8 - 0.4)/2.0
+
+    var currentPos = 0.0
+        private set
+
     val pidController = PIDController(kP, kI, kD)
-    var currentHeight = 0.0
-        private set
     var setpoint = 0.0
-        private set
     val slewRateLimiter = SlewRateLimiter(1.3)
+    var lowerBound = 0.0
+    var upperBound = 1.0
 
     val motorTop = SparkMax(CanId.ELEVATOR_TOP, SparkLowLevel.MotorType.kBrushless)
     val motorConfig = SparkMaxConfig()
@@ -68,16 +70,20 @@ class ElevatorSubsystem : SubsystemBase() {
     override fun periodic() {
         val encoderPos = motorTop.encoder.position
         val heightFraction = encoderPos/ELEVATOR_MAX_ENCODER_VALUE
-        currentHeight = heightFraction
+        currentPos = heightFraction
         SmartDashboard.putNumber("Elevator Encoder", encoderPos)
         SmartDashboard.putNumber("Elevator Fraction", heightFraction)
         SmartDashboard.putNumber("Elevator Setpoint", pidController.setpoint)
         SmartDashboard.putNumber("Elevator Current", motorTop.outputCurrent)
-        pidController.setpoint = slewRateLimiter.calculate(setpoint)
-        val voltage = pidController.calculate(heightFraction) +
-                kFF
-        + kS * sign(pidController.setpoint - encoderPos)
+
+        val setpointAfterClamp = clamp(setpoint, lowerBound, upperBound)
+        /*if (setpoint != setpointAfterClamp) {
+            slewRateLimiter.reset(setpointAfterClamp)
+        }*/
+        pidController.setpoint = slewRateLimiter.calculate(setpointAfterClamp)
+        val voltage = pidController.calculate(heightFraction) + kFF + kS * sign(pidController.setpoint - encoderPos)
         motorTop.setVoltage(clamp(voltage, -12.0, 12.0) )
+        //motorTop.setVoltage(0.0)
     }
 
     fun toPosCommand(pos: Double): Command {

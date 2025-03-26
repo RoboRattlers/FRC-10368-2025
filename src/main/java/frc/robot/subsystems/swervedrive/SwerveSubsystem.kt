@@ -114,12 +114,6 @@ class SwerveSubsystem : SubsystemBase {
     }
 
     override fun periodic() {
-        // When vision is enabled we must manually update odometry in SwerveDrive
-        /*if (visionDriveTest)
-		{
-		swerveDrive.updateOdometry();
-		vision.updatePoseEstimation(swerveDrive);
-		}*/
 
         SmartDashboard.putNumber(
             "Top right azimuth rotations",
@@ -148,6 +142,15 @@ class SwerveSubsystem : SubsystemBase {
         )
         SmartDashboard.putNumber(
             "Front left drive meters", swerveDrive.modulePositions[0].distanceMeters
+        )
+        SmartDashboard.putNumber(
+            "Swerve heading", swerveDrive.pose.rotation.degrees
+        )
+        SmartDashboard.putNumber(
+            "Swerve X", swerveDrive.pose.x
+        )
+        SmartDashboard.putNumber(
+            "Swerve Y", swerveDrive.pose.y
         )
     }
 

@@ -28,12 +28,14 @@ class PivotSubsystem : SubsystemBase() {
     val kI = 0.0
     val kD = 0.0
     val kFF = 0.0
-    val kS = (0.8 - 0.4)/2.0
+    val balancedEncoderOffset = 0.0
+
+    var currentPos = 0.0
+        private set
+
     val pidController = PIDController(kP, kI, kD)
     var setpoint = 0.0
-        private set
     val slewRateLimiter = SlewRateLimiter(2000.0)
-
     var usePid = true
     var lowerBound = 400.0
     var upperBound = 900.0
@@ -42,27 +44,23 @@ class PivotSubsystem : SubsystemBase() {
         motor.pid0.setP(0.001)
             .setI(0.0)
             .setD(0.0)
-        //motor.usePIDSlot(PIDSlot.SLOT0)
     }
 
     override fun periodic() {
         SmartDashboard.putNumber("Pivot Encoder", motor.positionInternal)
         SmartDashboard.putNumber("Pivot Current", motor.statorCurrent)
 
-        val setpointBeforeClamp = setpoint
-        setpoint = clamp(setpoint, lowerBound, upperBound)
-        if (setpointBeforeClamp != setpoint) {
-            slewRateLimiter.reset(setpoint)
+        val setpointAfterClamp = clamp(setpoint, lowerBound, upperBound)
+        if (setpoint != setpointAfterClamp) {
+            //slewRateLimiter.reset(setpointAfterClamp)
         }
-        pidController.setpoint = slewRateLimiter.calculate(setpoint)
-        val voltage = pidController.calculate(motor.positionInternal * encoderMutiplier) +
-                kFF
-        //+ kS * sign(pidController.setpoint - encoderPos)
-        motor.setVoltage(clamp(voltage, -12.0, 12.0) )
-        for (error in motor.errors) {
-            println(error)
+        pidController.setpoint = slewRateLimiter.calculate(setpointAfterClamp)
+        currentPos = motor.positionInternal * encoderMutiplier
+        val voltage = pidController.calculate(currentPos) + kFF
+        if (usePid) {
+            motor.setVoltage(clamp(voltage, -12.0, 12.0))
+            //motor.setVoltage(0.0)
         }
-        motor.clearErrors()
 
     }
 

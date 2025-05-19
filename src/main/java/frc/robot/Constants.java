@@ -45,5 +45,8 @@ public final class Constants {
 		public static final int CORALGAE_OUTER_TOP = 14;
 
 		public static final int CORALGAE_OUTER_BOTTOM = 15;
+
+		public static final int CORINTAKE_PIVOT = 30;
+		public static final int CORINTAKE_INTAKE = 31;
 	}
 }

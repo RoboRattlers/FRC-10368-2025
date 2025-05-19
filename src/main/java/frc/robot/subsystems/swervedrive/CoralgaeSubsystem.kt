@@ -27,7 +27,7 @@ class CoralgaeSubsystem : SubsystemBase() {
     var algaeStall = false
 
     init {
-        this.defaultCommand = run {
+        this.defaultCommand = runOnce {
             motorInner.setVoltage(if (algaeStall) 0.5 else 0.0)
             motorOuterTop.setVoltage(0.0)
             motorOuterBottom.setVoltage(0.0)
@@ -48,13 +48,14 @@ class CoralgaeSubsystem : SubsystemBase() {
             run {
                 motorOuterTop.setVoltage(-12.0 * fraction)
                 motorOuterBottom.setVoltage(-12.0 * fraction)
-                algaeStall = false
-            }.withTimeout(1.0),
+                motorInner.setVoltage(0.5)
+            } .withTimeout(1.0),
             run {
                 motorInner.setVoltage(-6.0)
                 motorOuterTop.setVoltage(-12.0 * fraction)
                 motorOuterBottom.setVoltage(-12.0 * fraction)
-            } )
+                algaeStall = false
+            } .withTimeout(1.0) )
     }
 
     fun coralIntakeCommand(fraction: Double): Command {

@@ -7,14 +7,19 @@ import com.revrobotics.spark.config.EncoderConfig
 import com.revrobotics.spark.config.SoftLimitConfig
 import com.revrobotics.spark.config.SparkBaseConfig
 import com.revrobotics.spark.config.SparkMaxConfig
+import com.thethriftybot.ThriftyNova
 import edu.wpi.first.math.MathUtil.clamp
 import edu.wpi.first.math.controller.PIDController
 import edu.wpi.first.math.filter.SlewRateLimiter
+import edu.wpi.first.wpilibj.Timer
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.SubsystemBase
 import frc.robot.Constants.CanId
 import kotlin.math.sign
+
+private const val MAX_OUTPUT = 0.8
+private const val STATOR_CURRENT_LIMIT = 40.0
 
 class ElevatorSubsystem : SubsystemBase() {
 
@@ -34,62 +39,53 @@ class ElevatorSubsystem : SubsystemBase() {
     var lowerBound = 0.0
     var upperBound = 1.0
 
-    val motorTop = SparkMax(CanId.ELEVATOR_TOP, SparkLowLevel.MotorType.kBrushless)
-    val motorConfig = SparkMaxConfig()
-        .smartCurrentLimit(40)
-        .idleMode(SparkBaseConfig.IdleMode.kBrake)
-        .apply(
-            SoftLimitConfig()
-                .forwardSoftLimit(ELEVATOR_MAX_ENCODER_VALUE)
-                .forwardSoftLimitEnabled(true)
-                .reverseSoftLimit(0.0)
-                .reverseSoftLimitEnabled(true)
-        )
-        .apply(
-            EncoderConfig()
-                .positionConversionFactor(42.0)
-        )
-    val motorBottom = SparkMax(CanId.ELEVATOR_BOTTOM, SparkLowLevel.MotorType.kBrushless)
+    var motorTop = ThriftyNova(CanId.ELEVATOR_TOP)
+        .setInversion(false)
+        .setBrakeMode(true)
+        .setMaxCurrent(ThriftyNova.CurrentType.STATOR, STATOR_CURRENT_LIMIT)
+        .setMaxOutput(MAX_OUTPUT)
+        .setSoftLimits(0.0, ELEVATOR_MAX_ENCODER_VALUE)
+        .useEncoderType(ThriftyNova.EncoderType.INTERNAL)
+    var motorBottom = ThriftyNova(CanId.ELEVATOR_BOTTOM)
+        .setInversion(false)
+        .setBrakeMode(true)
+        .setMaxCurrent(ThriftyNova.CurrentType.STATOR, STATOR_CURRENT_LIMIT)
+        .setMaxOutput(MAX_OUTPUT)
+        .setSoftLimits(0.0, ELEVATOR_MAX_ENCODER_VALUE)
+        .useEncoderType(ThriftyNova.EncoderType.INTERNAL)
 
     init {
-        motorTop.configure(
-            motorConfig,
-            SparkBase.ResetMode.kResetSafeParameters,
-            SparkBase.PersistMode.kPersistParameters
-        )
-        motorBottom.configure(
-            SparkMaxConfig()
-                .apply(motorConfig)
-                .follow(motorTop),
-            SparkBase.ResetMode.kResetSafeParameters,
-            SparkBase.PersistMode.kPersistParameters
-        )
-        SmartDashboard.putNumber("Elevator FF", 0.0)
+        motorTop.canFreq.setSensor(0.01)
+        motorBottom.canFreq.setSensor(0.01)
+    }
+
+    fun setMotorBrake(brake: Boolean) {
+        motorTop.setBrakeMode(brake)
+        motorBottom.setBrakeMode(brake)
     }
 
     override fun periodic() {
-        val encoderPos = motorTop.encoder.position
+        val encoderPos = motorBottom.positionInternal
         val heightFraction = encoderPos/ELEVATOR_MAX_ENCODER_VALUE
         currentPos = heightFraction
         SmartDashboard.putNumber("Elevator Encoder", encoderPos)
         SmartDashboard.putNumber("Elevator Fraction", heightFraction)
         SmartDashboard.putNumber("Elevator Setpoint", pidController.setpoint)
-        SmartDashboard.putNumber("Elevator Current", motorTop.outputCurrent)
+        SmartDashboard.putNumber("Elevator Current", motorBottom.statorCurrent)
 
         val setpointAfterClamp = clamp(setpoint, lowerBound, upperBound)
-        /*if (setpoint != setpointAfterClamp) {
-            slewRateLimiter.reset(setpointAfterClamp)
-        }*/
         pidController.setpoint = slewRateLimiter.calculate(setpointAfterClamp)
         val voltage = pidController.calculate(heightFraction) + kFF + kS * sign(pidController.setpoint - encoderPos)
+        motorBottom.setVoltage(clamp(voltage, -12.0, 12.0) )
         motorTop.setVoltage(clamp(voltage, -12.0, 12.0) )
-        //motorTop.setVoltage(0.0)
+
+
     }
 
     fun toPosCommand(pos: Double): Command {
-        return runOnce {
+        return run {
             setpoint = pos
-        }
+        } .until( { currentPos - setpoint < 0.03 } )
     }
 
 }

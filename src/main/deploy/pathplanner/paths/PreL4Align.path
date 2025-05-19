@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.107148972602739,
-        "y": 7.157855308219178
+        "x": 7.34755993150685,
+        "y": 4.032512842465753
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.368294121722845,
-        "y": 7.130336203315205
+        "x": 6.876344815187375,
+        "y": 3.933707749308983
       },
       "isLocked": false,
-      "linkedName": "ReefEShot"
+      "linkedName": null
     },
     {
       "anchor": {
-        "x": 6.0553510273972595,
-        "y": 6.9925727739726025
+        "x": 6.3258133561643834,
+        "y": 3.867230308219178
       },
       "prevControl": {
-        "x": 6.011412501788927,
-        "y": 7.238681298748495
+        "x": 7.411951600358936,
+        "y": 4.019355904818329
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "PreL4Align"
     }
   ],
   "rotationTargets": [],
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -2.8624052261117137
+    "rotation": 180.0
   },
   "reversed": false,
   "folder": "2AlgaePaths",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -1.4320961841646318
+    "rotation": 180.0
   },
   "useDefaultConstraints": true
 }

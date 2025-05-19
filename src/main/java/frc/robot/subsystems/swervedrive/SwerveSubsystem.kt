@@ -14,9 +14,7 @@ import com.pathplanner.lib.util.DriveFeedforwards
 import com.pathplanner.lib.util.swerve.SwerveSetpoint
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator
 import edu.wpi.first.math.controller.SimpleMotorFeedforward
-import edu.wpi.first.math.geometry.Pose2d
-import edu.wpi.first.math.geometry.Rotation2d
-import edu.wpi.first.math.geometry.Translation2d
+import edu.wpi.first.math.geometry.*
 import edu.wpi.first.math.kinematics.ChassisSpeeds
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics
 import edu.wpi.first.math.trajectory.Trajectory
@@ -27,10 +25,13 @@ import edu.wpi.first.wpilibj.Timer
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.Commands
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup
 import edu.wpi.first.wpilibj2.command.SubsystemBase
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine
 import frc.robot.Constants
+import frc.robot.util.LimelightHelpers
+import frc.robot.util.LimelightHelpers.LimelightTarget_Fiducial
 import org.json.simple.parser.ParseException
 import swervelib.SwerveController
 import swervelib.SwerveDrive
@@ -50,6 +51,12 @@ import java.util.function.Consumer
 import java.util.function.DoubleSupplier
 import java.util.function.Supplier
 import kotlin.math.pow
+
+enum class AutoAlignSide {
+    LEFT,
+    CENTER,
+    RIGHT
+}
 
 class SwerveSubsystem : SubsystemBase {
 
@@ -100,8 +107,7 @@ class SwerveSubsystem : SubsystemBase {
 		// Stop the odometry thread if we are using vision that way we can synchronize updates better.
 		swerveDrive.stopOdometryThread();
 		}*/
-        setupPathPlanner()
-        RobotModeTriggers.autonomous().onTrue(Commands.runOnce({ this.zeroGyroWithAlliance() }))
+        //setupPathPlanner()
     }
 
     constructor(driveCfg: SwerveDriveConfiguration?, controllerCfg: SwerveControllerConfiguration?) {
@@ -114,6 +120,9 @@ class SwerveSubsystem : SubsystemBase {
     }
 
     override fun periodic() {
+
+        val robotYaw: Double = swerveDrive.yaw.radians
+        LimelightHelpers.SetRobotOrientation("", robotYaw, 0.0, 0.0, 0.0, 0.0, 0.0)
 
         SmartDashboard.putNumber(
             "Top right azimuth rotations",
@@ -155,6 +164,47 @@ class SwerveSubsystem : SubsystemBase {
     }
 
     override fun simulationPeriodic() {}
+
+    val VALID_REEF_TAGS = listOf(6, 7, 8, 9, 10, 11, 17, 18, 19, 20, 21, 22)
+
+    fun reefAutoAlignCommand(side: AutoAlignSide): Command {
+        var tagId = 0
+        val translationKp = 0.05
+        val headingKp = 0.05
+        // facing tag
+        // x+ = right
+        // y+ = down
+        // z+ = toward me
+        val centeringSign = if (side == AutoAlignSide.LEFT) 1.0
+        else if (side == AutoAlignSide.RIGHT) -1.0
+        else 0.0
+        val goalOffset = Pose2d(Translation2d(20.0, 7.0 * centeringSign), Rotation2d(0.0))
+
+        return SequentialCommandGroup( runOnce {
+            val tagId = LimelightHelpers.getFiducialID("").toInt()
+            if (tagId !in VALID_REEF_TAGS) {
+                return@runOnce
+            }
+        }, run {
+            //LimelightHelpers.setPriorityTagID("", tagId)
+            if (LimelightHelpers.getFiducialID("").toInt() == tagId) {
+                val currentOffset = LimelightHelpers.getTargetPose3d_RobotSpace("")
+                    .toPose2d()
+
+                
+                swerveDrive.drive(
+                    Translation2d(
+                        currentOffset.x - goalOffset.x,
+                        currentOffset.y - goalOffset.y
+                    )
+                        .times(translationKp),
+                    (currentOffset.rotation.radians - goalOffset.rotation.radians) * headingKp,
+                    false,
+                    true
+                )
+            }
+        } )
+    }
 
     /**
      * Setup AutoBuilder for PathPlanner.
@@ -218,7 +268,8 @@ class SwerveSubsystem : SubsystemBase {
      */
     fun getAutonomousCommand(pathName: String?): Command {
         // Create a path following command using AutoBuilder. This will also trigger event markers.
-        return PathPlannerAuto(pathName)
+        val auto = PathPlannerAuto(pathName)
+        return auto
     }
 
     /**
@@ -482,6 +533,8 @@ class SwerveSubsystem : SubsystemBase {
      * @param initialHolonomicPose The pose to set the odometry to
      */
     fun resetOdometry(initialHolonomicPose: Pose2d?) {
+        println(initialHolonomicPose)
+        Thread.dumpStack()
         swerveDrive.resetOdometry(initialHolonomicPose)
     }
 

@@ -8,20 +8,20 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.368294121722845,
-        "y": 7.130336203315205
+        "x": 7.364636306893868,
+        "y": 7.251011714927329
       },
       "isLocked": false,
       "linkedName": "ReefEShot"
     },
     {
       "anchor": {
-        "x": 6.0553510273972595,
-        "y": 6.9925727739726025
+        "x": 5.274015410958904,
+        "y": 5.459952910958905
       },
       "prevControl": {
-        "x": 6.011412501788927,
-        "y": 7.238681298748495
+        "x": 6.205607876712329,
+        "y": 6.346468321917809
       },
       "nextControl": null,
       "isLocked": false,
@@ -42,7 +42,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -2.8624052261117137
+    "rotation": -119.24882633654694
   },
   "reversed": false,
   "folder": "2AlgaePaths",
